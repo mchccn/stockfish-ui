@@ -66,19 +66,19 @@ const board = Chessboard("board", {
     onSnapEnd() {
         board.position(game.fen());
 
-        // const position = `position startpos moves ${(game.history({ verbose: true }) as Move[])
-        //     .map(({ from, to }) => `${from}${to}`)
-        //     .join(" ")}`;
+        const position = `position startpos moves ${(game.history({ verbose: true }) as Move[])
+            .map(({ from, to }) => `${from}${to}`)
+            .join(" ")}`;
 
-        // ws.send(position);
+        ws.send(position);
 
-        // ws.send("d");
+        ws.send("d");
 
-        // ws.send("go ponder");
+        ws.send("go ponder");
 
-        // setTimeout(() => {
-        //     ws.send("stop");
-        // }, 1000);
+        setTimeout(() => {
+            ws.send("stop");
+        }, 1000);
     },
     onMouseoverSquare(square, piece) {
         const moves = game.moves({
@@ -103,22 +103,6 @@ const logs = document.querySelector<HTMLPreElement>("#logs")!;
 
 const ws = new WebSocket(`ws://${location.hostname}:${SERVER_PORT}`);
 
-ws.addEventListener("open", () => {
-    const position = `position startpos moves ${(game.history({ verbose: true }) as Move[])
-        .map(({ from, to }) => `${from}${to}`)
-        .join(" ")}`;
-
-    ws.send(position);
-
-    ws.send("d");
-
-    ws.send("go ponder");
-
-    setTimeout(() => {
-        ws.send("stop");
-    }, 1000);
-});
-
 ws.addEventListener("message", ({ data }: { data: string }) => {
     logs.textContent += data;
     logs.scrollTop = logs.scrollHeight;
@@ -129,20 +113,6 @@ ws.addEventListener("message", ({ data }: { data: string }) => {
         game.move({ from, to });
 
         board.position(game.fen());
-
-        const position = `position startpos moves ${(game.history({ verbose: true }) as Move[])
-            .map(({ from, to }) => `${from}${to}`)
-            .join(" ")}`;
-
-        ws.send(position);
-
-        ws.send("d");
-
-        ws.send("go ponder");
-
-        setTimeout(() => {
-            ws.send("stop");
-        }, 1000);
     }
 });
 
