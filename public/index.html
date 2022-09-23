@@ -10,7 +10,17 @@
         <script src="./WEBPACK_BUILD.js" async defer></script>
     </head>
     <body>
-        <div id="board"></div>
+        <section>
+            <p class="shortcuts">
+                <span> + inc ponder time</span>
+                <span> - dec ponder time</span>
+                <span> ~ flip board</span>
+                <span> / toggle engine</span>
+            </p>
+            <div id="board"></div>
+            <p id="pondertime">ponder time: 1000ms</p>
+            <p id="disabled">engine disabled: false</p>
+        </section>
         <pre id="logs"></pre>
     </body>
 </html>

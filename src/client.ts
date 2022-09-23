@@ -31,13 +31,39 @@ declare function Chessboard(
 
 const game = new Chess();
 
+let engineThinking = false;
+
+function engineMove() {
+    engineThinking = true;
+
+    const position = `position startpos moves ${(game.history({ verbose: true }) as Move[])
+        .map(({ from, to }) => `${from}${to}`)
+        .join(" ")}`;
+
+    ws.send(position);
+
+    ws.send("d");
+
+    ws.send("go ponder");
+
+    setTimeout(() => {
+        ws.send("stop");
+
+        engineThinking = false;
+    }, ponder);
+}
+
 const board = Chessboard("board", {
     draggable: true,
     position: "start",
     onDragStart(source, piece, position, orientation) {
         if (game.isGameOver()) return false;
 
-        if ((game.turn() === "w" && piece.search(/^b/) !== -1) || (game.turn() === "b" && piece.search(/^w/) !== -1))
+        if (
+            engineThinking ||
+            (game.turn() === "w" && piece.search(/^b/) !== -1) ||
+            (game.turn() === "b" && piece.search(/^w/) !== -1)
+        )
             return false;
 
         return undefined;
@@ -45,13 +71,11 @@ const board = Chessboard("board", {
     onDrop(source, target) {
         document.querySelectorAll<HTMLDivElement>("#board .square-55d63").forEach((s) => (s.style.background = ""));
 
-        const move = game.move({
-            from: source,
-            to: target,
-        });
-
         if (
-            move === null &&
+            game.move({
+                from: source,
+                to: target,
+            }) === null &&
             game.move({
                 from: source,
                 to: target,
@@ -66,19 +90,7 @@ const board = Chessboard("board", {
     onSnapEnd() {
         board.position(game.fen());
 
-        const position = `position startpos moves ${(game.history({ verbose: true }) as Move[])
-            .map(({ from, to }) => `${from}${to}`)
-            .join(" ")}`;
-
-        ws.send(position);
-
-        ws.send("d");
-
-        ws.send("go ponder");
-
-        setTimeout(() => {
-            ws.send("stop");
-        }, 1000);
+        if (enabled) engineMove();
     },
     onMouseoverSquare(square, piece) {
         const moves = game.moves({
@@ -100,6 +112,29 @@ const board = Chessboard("board", {
 });
 
 const logs = document.querySelector<HTMLPreElement>("#logs")!;
+const pondertime = document.querySelector<HTMLParagraphElement>("#pondertime")!;
+const disabled = document.querySelector<HTMLParagraphElement>("#disabled")!;
+let ponder = 1000;
+let enabled = true;
+
+document.addEventListener("keypress", (e) => {
+    if (e.key === "+") ponder += 500;
+    if (e.key === "-") ponder = Math.abs(ponder - 500);
+
+    pondertime.textContent = `ponder time: ${ponder}ms`;
+
+    if (e.key === "~") {
+        board.flip();
+
+        if (enabled) engineMove();
+    }
+
+    if (e.key === "/") {
+        enabled = !enabled;
+
+        disabled.textContent = `engine disabled: ${!enabled}`;
+    }
+});
 
 const ws = new WebSocket(`ws://${location.hostname}:${SERVER_PORT}`);
 
@@ -110,7 +145,7 @@ ws.addEventListener("message", ({ data }: { data: string }) => {
     if (data.includes("bestmove")) {
         const [from, to] = data.slice(data.indexOf("bestmove")).split(" ")[1].match(/.{2}/g)!;
 
-        game.move({ from, to });
+        if (game.move({ from, to }) === null) game.move({ from, to, promotion: "q" });
 
         board.position(game.fen());
     }
